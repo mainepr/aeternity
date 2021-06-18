@@ -264,7 +264,8 @@ locate(Data, Block) ->
 
 -spec init_state(data(), block()) -> data().
 init_state(Data, Block) ->
-    Pointer = pointer(Data),
+%%    Pointer = pointer(Data),
+    Pointer = aeconnector_block:hash(Block),
     State = aehc_parent_db:get_parent_state(Pointer),
     (State == undefined) andalso
     begin
