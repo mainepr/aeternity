@@ -109,11 +109,12 @@ publish(Pid, Block) ->
 
 init(Data) ->
     {ok, Pid} = connect(Data), _Ref = erlang:monitor(process, Pid),
-    ok = init_state(Data),
-    Data2 = sync_state(Data),
+
     {ok, Hash} = aeconnector:get_top_block(connector(Data)),
     {ok, Block} = aeconnector:get_block_by_hash(connector(Data), Hash),
-    Data3 = indicate(Data2, Block),
+
+    ok = init_state(Data, Block),
+    Data2 = sync_state(Data), Data3 = indicate(Data2, Block),
     {ok, fetched, Data3, [{next_event, internal, {added_block, Block}}]}.
 
 callback_mode() ->
@@ -261,13 +262,13 @@ locate(Data, Block) ->
 %%%  Data mapper
 %%%===================================================================
 
--spec init_state(data()) -> data().
-init_state(Data) ->
+-spec init_state(data(), block()) -> data().
+init_state(Data, Block) ->
     Pointer = pointer(Data),
     State = aehc_parent_db:get_parent_state(Pointer),
     (State == undefined) andalso
     begin
-        {ok, Block} = aeconnector:get_block_by_hash(connector(Data), Pointer),
+%%        {ok, Block} = aeconnector:get_block_by_hash(connector(Data), Pointer),
         %% TODO To transform into parent block
         %% This place is an analogue of genesis instantiation
         Trees = aehc_parent_trees:new(),
