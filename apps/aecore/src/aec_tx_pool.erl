@@ -77,6 +77,7 @@
 -export([peek_db/0]).
 -export([peek_visited/0]).
 -export([peek_nonces/0]).
+-export([nonce_offset/0]).
 -endif.
 
 %% gen_server callbacks
