@@ -483,12 +483,10 @@ end_per_group(Group, Config) ->
                                       responder_is_ga, both_are_ga]) of
                 true ->
                     ok;
-                    %%_Config1 = stop_node(dev1, Config);
                 false -> pass
             end;
         false ->
             ok
-            %%_Config1 = stop_node(dev1, Config)
     end,
     ok.
 
@@ -514,10 +512,6 @@ init_per_testcase(_, Config) ->
 end_per_testcase(_Case, _Config) ->
     bump_idx(),
     ok.
-
-stop_node(N, Config) ->
-    aecore_suite_utils:stop_node(N, Config),
-    Config.
 
 %%%===================================================================
 %%% Test state
@@ -1125,7 +1119,7 @@ op_with_signer_disconnect(Op, Args, SignTag1, RptTag2, SignTag2, Cfg) ->
     rpc(dev1, aesc_fsm, Op, Args(FsmR, 1, Spec)),
     {_, _} = await_signing_request(SignTag1, R, Debug, Cfg),
     {ok, _} = receive_from_fsm(info, I, RptTag2, ?TIMEOUT, Debug),
-    SignedTx = signer_disconnects(SignTag2, I, ?TIMEOUT, Debug),
+    _SignedTx = signer_disconnects(SignTag2, I, ?TIMEOUT, Debug),
     Pat = #{info => #{error_code => ?ERR_CLIENT_DISCONNECTED,
                       round => Round0}},
     {ok, _} = receive_from_fsm(conflict, R, Pat, ?TIMEOUT, Debug),
@@ -2476,8 +2470,8 @@ ch_loop(I, R, Parent, Cfg, St) ->
                                   end, I, R, Cfg),
             {I1_, R1_}
             catch
-                error:R ->
-                    ?LOG("CAUGHT ~p / ~p", [R, erlang:get_stacktrace()]),
+                error:R:ST ->
+                    ?LOG("CAUGHT ~p / ~p", [R, ST]),
                     {I, R}
             end,
             Parent ! {self(), loop_ack},
@@ -3011,9 +3005,6 @@ signer_disconnects(Tag, #{fsm := Fsm, proxy := Proxy}, Timeout, Debug) ->
             error(timeout)
     end.
 
-map_key(initiator) -> i;
-map_key(responder) -> r.
-
 sign_tx(Signer, Tx, Cfg) ->
     co_sign_tx(Signer, aetx_sign:new(Tx, []), Cfg).
 
@@ -3231,8 +3222,8 @@ match_msgs(Pat, M, Cont) when is_map(M), is_map(Pat) ->
     try match_info(M, Pat),
         {ok, M}
     catch
-        error:_E when Cont ->
-            ?LOG("CAUGHT ~p (M = ~p)", [_E, M]),
+        error:E when Cont ->
+            ?LOG("CAUGHT ~p (M = ~p)", [E, M]),
             throw(continue)
     end;
 match_msgs(_, _, true) ->
@@ -4390,7 +4381,7 @@ extract_nonce_from_btc_auth_store(Store) ->
             {ok, {Nonce, _}} = aeb_heap:from_binary({tuple, [word, {tuple, [word, word]}]},
                                                     EncodedHeap),
             Nonce;
-        #{<<0, 1>> := FateValue} = X ->
+        #{<<0, 1>> := FateValue} ->
             aeb_fate_encoding:deserialize(FateValue)
     end.
 
@@ -5791,11 +5782,11 @@ missing_malicious_close(Cfg0) ->
     ok = rpc(dev1, aec_tx_pool, push, [SignedCloseSoloTx]),
     TxHash = aeser_api_encoder:encode(tx_hash, aetx_sign:hash(SignedCloseSoloTx)),
     mine_blocks_until_txs_on_chain(dev1, [TxHash]),
-    SlashTx = await_on_chain_report(R2, #{info => can_slash}, ?TIMEOUT),
+    _SlashTx = await_on_chain_report(R2, #{info => can_slash}, ?TIMEOUT),
     {ok,_} = receive_from_fsm(info, R2, fun closing/1, ?TIMEOUT, Debug),
     %% reestablish initiator
     Info = #{i => I3, r => R2, spec => Spec},
-    #{i := #{fsm_id := _IFsmId1} = I4, r := #{fsm_id := _RFsmId1} = R3} =
+    #{i := #{fsm_id := _IFsmId1} = I4, r := #{fsm_id := _RFsmId1}} =
         reestablish_(Info, SignedTx, ?PORT, Debug),
     SignedCloseSoloTx = await_on_chain_report(I4, #{info => can_slash}, ?TIMEOUT),
     assert_empty_msgq(Debug),
@@ -6112,7 +6103,7 @@ snapshot_and_conflict(Cfg) ->
 
 force_progress_and_conflict(Cfg) ->
     Debug = get_debug(Cfg),
-    #{ i := #{fsm := FsmI} = I
+    #{ i := #{fsm := _FsmI} = I
      , r := #{fsm := FsmR} = R
      , spec := #{ initiator := PubI
                 , responder := PubR }} = create_channel_([?SLOGAN|Cfg]),
