@@ -27,6 +27,7 @@
           mine_2_txs/1
         , mine_5_txs_from_the_same_account/1
         , txs_without_balance_are_not_mined/1
+        , delete_tx_from_mempool/1
         ]).
 
 -define(NODE, dev1).
@@ -48,6 +49,7 @@ groups() ->
       [ mine_2_txs
       , mine_5_txs_from_the_same_account
       , txs_without_balance_are_not_mined
+      , delete_tx_from_mempool
       ]}
     ].
 
@@ -199,6 +201,28 @@ txs_without_balance_are_not_mined(Config) ->
     {ok, _} = ?MINE_TXS([SpendTxHash2, SpendTxHash3]),
     [] = pending_txs(),
     ok.
+
+delete_tx_from_mempool(Config) ->
+    %% precondition - no txs in the pool
+    [] = pending_txs(),
+    #{acc_a := #{pub_key := Alice, priv_key := AlicePrivkey},
+      acc_b := #{pub_key := Bob, priv_key := BobPrivkey} } =
+        ?config(accounts, Config),
+    Fee = 20000 * ?DEFAULT_GAS_PRICE,
+    SpendTx1 = sign_tx(spend_tx(Alice, Alice, 1, Fee), AlicePrivkey),
+    SpendTx2 = sign_tx(spend_tx(Bob, Bob, 1, Fee), BobPrivkey),
+    {ok, 200, #{<<"tx_hash">> := SpendTxHash1}} = post_tx(SpendTx1),
+    {ok, 200, #{<<"tx_hash">> := SpendTxHash2}} = post_tx(SpendTx2),
+    PendingTxs = pending_txs(),
+    %% assert 2 txs in pool
+    2 = length(PendingTxs),
+    {ok, 200, #{<<"status">> := <<"deleted">>}} =
+        aehttp_integration_SUITE:delete_tx_from_mempool_sut(SpendTxHash1),
+    {ok, _} = ?MINE_TXS([SpendTxHash1, SpendTxHash2]),
+    %% assert pool is empty
+    [] = pending_txs(),
+    ok.
+
 
 %% ============================================================
 %% private functions

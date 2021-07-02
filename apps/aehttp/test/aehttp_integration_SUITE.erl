@@ -41,6 +41,7 @@
    , get_spend/1
    , post_transactions_sut/1
    , get_transactions_pending_sut/0
+   , delete_tx_from_mempool_sut/1
    ]).
 
 -export(
@@ -1442,6 +1443,12 @@ get_accounts_transactions_pending_by_pubkey_sut(Id) ->
 get_transactions_pending_sut() ->
     Host = internal_address(),
     http_request(Host, get, "debug/transactions/pending", []).
+
+delete_tx_from_mempool_sut(Hash) when is_binary(Hash) ->
+    delete_tx_from_mempool_sut(binary_to_list(Hash));
+delete_tx_from_mempool_sut(Hash) when is_list(Hash) ->
+    Host = internal_address(),
+    http_request(Host, get, "node/operator/mempool/hash/" ++ Hash, []).
 
 %% /transactions/*
 
