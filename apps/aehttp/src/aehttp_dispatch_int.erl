@@ -211,6 +211,7 @@ handle_request_('GetTokenSupplyByHeight', Req, _Context) ->
 
 handle_request_('DeleteTxFromMempool', Req, _Context) ->
     ParseFuns = [ parse_map_to_atom_keys(),
+                  read_required_params([hash]),
                   api_decode([{hash, hash, tx_hash}]),
                   fun(_Req, #{hash := TxHash}) ->
                       {ok, {200, [], #{<<"status">> => <<"deleted">>}}}

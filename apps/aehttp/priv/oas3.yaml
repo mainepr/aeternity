@@ -2016,7 +2016,6 @@ paths:
       operationId: DeleteTxFromMempool
       description: Delete a pending transaction from the mempool
       parameters:
-        - $ref: '#/components/parameters/height'
         - $ref: '#/components/parameters/txHash'
       responses:
         "200":

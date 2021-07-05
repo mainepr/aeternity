@@ -64,7 +64,8 @@ init_per_suite(Config0) ->
                    #{<<"persist">> => false,
                      <<"hard_forks">> => Forks},
               <<"http">> =>
-                   #{<<"cache">> => #{<<"enabled">> => false}}},
+                  #{<<"endpoints">> => #{<<"node-operator">> => true},
+                    <<"cache">> => #{<<"enabled">> => false}}},
     Config1 = [{instant_mining, true}, {symlink_name, "latest.http_mempool"}, {test_module, ?MODULE}] ++ Config0,
     Config2 = aecore_suite_utils:init_per_suite([?NODE], DefCfg, Config1),
     NodeName = aecore_suite_utils:node_name(?NODE),

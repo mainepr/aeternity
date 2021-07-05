@@ -48,6 +48,7 @@
         , top_change/3
         , top_change/4
         , dbs/0
+        , delete/1
         ]).
 
 %% exports used by GC (should perhaps be in a common lib module)
@@ -257,6 +258,10 @@ peek(MaxN) when is_integer(MaxN), MaxN >= 0; MaxN =:= infinity ->
 peek(MaxN, Account) when is_integer(MaxN), MaxN >= 0; MaxN =:= infinity ->
     gen_server:call(?SERVER, {peek, MaxN, Account}).
 
+-spec delete(binary()) -> ok | {error, not_found}.
+delete(TxHash) ->
+    ok.
+    
 -spec get_candidate(pos_integer(), binary()) -> {ok, [aetx_sign:signed_tx()]}.
 get_candidate(MaxGas, BlockHash) when is_integer(MaxGas), MaxGas > 0,
                                       is_binary(BlockHash) ->
@@ -357,6 +362,9 @@ handle_call_({top_change, Type, OldHash, NewHash}, _From, State) ->
 handle_call_({peek, MaxNumberOfTxs, Account}, _From, #state{dbs = Dbs} = State)
   when is_integer(MaxNumberOfTxs), MaxNumberOfTxs >= 0;
        MaxNumberOfTxs =:= infinity ->
+    Txs = pool_db_peek(Dbs, MaxNumberOfTxs, Account, all),
+    {reply, {ok, Txs}, State};
+handle_call_({delete, TxHash}, _From, #state{dbs = Dbs} = State) ->
     Txs = pool_db_peek(Dbs, MaxNumberOfTxs, Account, all),
     {reply, {ok, Txs}, State};
 handle_call_(dbs, _From, #state{dbs = Dbs} = State) ->
@@ -719,13 +727,13 @@ update_pool_on_tx_hash(TxHash, {#dbs{gc_db = GCDb} = Dbs, OriginsCache, GCHeight
             ets:insert(Handled, {TxHash}),
             {ok, Tx} = aec_db:dirty_get_signed_tx(TxHash),
             case aec_db:is_in_tx_pool(TxHash) of
-                false ->
+                true ->
                     %% Added to chain
                     Key = pool_db_key(Tx),
                     pool_db_raw_delete(Dbs, Key),
                     aec_tx_pool_gc:delete_hash(GCDb, TxHash),
                     add_to_origins_cache(OriginsCache, Tx);
-                true ->
+                false ->
                     Key = pool_db_key(Tx),
                     pool_db_raw_put(Dbs, GCHeight, Key, Tx, TxHash)
             end
