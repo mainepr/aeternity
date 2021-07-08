@@ -2009,7 +2009,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
   "/node/operator/mempool/hash/{hash}":
-    get:
+    delete:
       tags:
         - internal
         - node-operator

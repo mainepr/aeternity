@@ -1448,7 +1448,7 @@ delete_tx_from_mempool_sut(Hash) when is_binary(Hash) ->
     delete_tx_from_mempool_sut(binary_to_list(Hash));
 delete_tx_from_mempool_sut(Hash) when is_list(Hash) ->
     Host = internal_address(),
-    http_request(Host, get, "node/operator/mempool/hash/" ++ Hash, []).
+    http_request(Host, delete, "node/operator/mempool/hash/" ++ Hash, []).
 
 %% /transactions/*
 

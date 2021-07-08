@@ -365,8 +365,17 @@ handle_call_({peek, MaxNumberOfTxs, Account}, _From, #state{dbs = Dbs} = State)
     Txs = pool_db_peek(Dbs, MaxNumberOfTxs, Account, all),
     {reply, {ok, Txs}, State};
 handle_call_({delete, TxHash}, _From, #state{dbs = Dbs} = State) ->
-    Txs = pool_db_peek(Dbs, MaxNumberOfTxs, Account, all),
-    {reply, {ok, Txs}, State};
+    Res =
+        case aec_chain:find_tx_location(TxHash) of
+            BlockHash when is_binary(BlockHash) ->
+                {error, already_accepted};
+            mempool ->
+                %% TODO DELETE
+                ok;
+            not_found -> {error, tx_not_found};
+            none -> {error, tx_gced}
+        end,
+    {reply, Res, State};
 handle_call_(dbs, _From, #state{dbs = Dbs} = State) ->
     {reply, Dbs, State};
 handle_call_(Request, From, State) ->
